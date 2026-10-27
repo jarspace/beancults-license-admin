@@ -1,187 +1,250 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Beancults POS — Admin</title>
-  <style>
-    * { box-sizing: border-box; }
-
-    body {
-      margin: 0;
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-      background: #111713;
-      color: #f4f5ed;
-      font-family: Arial, sans-serif;
-    }
-
-    .card {
-      width: 100%;
-      max-width: 380px;
-      padding: 30px 24px;
-      background: #1c241e;
-      border: 1px solid #354338;
-      border-radius: 18px;
-    }
-
-    .brand {
-      color: #c4d6a0;
-      font-size: 13px;
-      letter-spacing: 3px;
-      font-weight: bold;
-    }
-
-    h1 {
-      margin: 12px 0 8px;
-      font-size: 27px;
-    }
-
-    .subtitle {
-      color: #a6b0a6;
-      font-size: 14px;
-      line-height: 1.6;
-      margin-bottom: 28px;
-    }
-
-    label {
-      display: block;
-      margin: 16px 0 8px;
-      font-size: 13px;
-      color: #dce3d7;
-    }
-
-    input {
-      width: 100%;
-      padding: 13px;
-      border: 1px solid #455448;
-      border-radius: 9px;
-      background: #111713;
-      color: white;
-      font-size: 16px;
-      outline: none;
-    }
-
-    input:focus { border-color: #b4cd8c; }
-
-    button {
-      width: 100%;
-      margin-top: 24px;
-      padding: 14px;
-      border: 0;
-      border-radius: 9px;
-      background: #c4d6a0;
-      color: #172016;
-      font-size: 15px;
-      font-weight: bold;
-    }
-
-    .status {
-      margin-top: 18px;
-      text-align: center;
-      color: #a6b0a6;
-      font-size: 13px;
-    }
-
-    footer {
-      margin-top: 26px;
-      text-align: center;
-      color: #7f8a80;
-      font-size: 11px;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Beancults POS — Admin</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#111713;color:#edf2e8;font-family:Arial,sans-serif}
+button,input{font:inherit}
+button{cursor:pointer}
+.hidden{display:none!important}
+header{padding:18px 20px;background:#1c241e;border-bottom:1px solid #354338;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.brand{color:#c4d6a0;font-weight:bold;letter-spacing:2px;font-size:12px}
+header h1{font-size:20px;margin:6px 0 0}
+button{border:0;border-radius:8px;padding:10px 14px;background:#c4d6a0;color:#172016;font-weight:bold}
+.secondary{background:#354338;color:#edf2e8}
+.danger{background:#733c3c;color:white}
+main{max-width:1100px;margin:auto;padding:20px}
+.card{background:#1c241e;border:1px solid #354338;border-radius:12px;padding:18px;margin-bottom:16px}
+#login{max-width:380px;margin:10vh auto;padding:26px}
+label{display:block;font-size:13px;margin:14px 0 7px;color:#c9d3c7}
+input{width:100%;padding:12px;border:1px solid #455448;border-radius:8px;background:#111713;color:white}
+#login button{width:100%;margin-top:20px}
+#status{font-size:13px;color:#c4d6a0;margin-top:14px;overflow-wrap:anywhere}
+nav{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0}
+nav button{background:#27332a;color:#dce5d8}
+nav button.active{background:#c4d6a0;color:#172016}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.stat{background:#202b22;border:1px solid #354338;padding:16px;border-radius:10px}
+.stat span{display:block;color:#a6b0a6;font-size:12px}
+.stat strong{display:block;font-size:25px;margin-top:8px}
+h2{font-size:18px;margin:0 0 15px}
+.tablewrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px;white-space:nowrap}
+th,td{text-align:left;padding:11px 9px;border-bottom:1px solid #354338}
+th{color:#c4d6a0}
+.muted{color:#a6b0a6;font-size:13px;line-height:1.6}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+#content{min-height:200px}
+@media(min-width:650px){.grid{grid-template-columns:repeat(4,minmax(0,1fr))}main{padding:28px}}
+</style>
 </head>
 <body>
-  <main class="card">
-    <div class="brand">BEANCULTS</div>
-    <h1>Admin Panel</h1>
-    <div class="subtitle">
-      Manajemen lisensi dan perangkat POS toko Anda.
-    </div>
+<section id="login" class="card">
+  <div class="brand">BEANCULTS</div>
+  <h1>Admin Panel</h1>
+  <p class="muted">Manajemen lisensi dan perangkat POS.</p>
+  <form id="loginForm">
+    <label for="email">Email administrator</label>
+    <input id="email" type="email" autocomplete="username" required>
+    <label for="password">Password</label>
+    <input id="password" type="password" autocomplete="current-password" required>
+    <button id="loginBtn" type="submit">Masuk</button>
+  </form>
+  <div id="loginStatus" role="status"></div>
+</section>
 
-    <form id="loginForm">
-      <label for="email">Email administrator</label>
-      <input
-        id="email"
-        type="email"
-        placeholder="admin@email.com"
-        autocomplete="username"
-        required
-      >
+<div id="app" class="hidden">
+<header>
+  <div><div class="brand">BEANCULTS</div><h1>Admin Lisensi</h1></div>
+  <button class="secondary" id="logoutBtn">Keluar</button>
+</header>
+<main>
+  <div class="muted" id="welcome">Memuat data...</div>
+  <nav id="nav">
+    <button class="active" data-page="summary">Ringkasan</button>
+    <button data-page="clients">Lisensi</button>
+    <button data-page="devices">Perangkat</button>
+    <button data-page="attempts">Aktivitas</button>
+    <button data-page="settings">Pengaturan</button>
+  </nav>
+  <div id="content" class="card">Memuat data...</div>
+  <div class="muted">Beancults POS · License Management</div>
+</main>
+</div>
 
-      <label for="password">Password</label>
-      <input
-        id="password"
-        type="password"
-        placeholder="Masukkan password"
-        autocomplete="current-password"
-        required
-      >
-
-      <button type="submit">Masuk</button>
-    </form>
-
-    <div class="status" id="status">
-      Portal administrator
-    </div>
-
-    <footer>BEANCULTS POS · LICENSE MANAGEMENT</footer>
-  </main>
-
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const SUPABASE_URL = "https://flfcrnuzaijydcahctnj.supabase.co";
-const SUPABASE_KEY = "sb_publishable_64s9cIol8IpQfV-_s-wL9g_rrucHS-v";
+const SUPABASE_URL = "ISI_PROJECT_URL";
+const SUPABASE_KEY = "ISI_PUBLISHABLE_KEY";
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-const supabaseClient = window.supabase.createClient(
-  SUPABASE_URL,
-  SUPABASE_KEY
-);
+const loginSection = document.getElementById("login");
+const app = document.getElementById("app");
+const content = document.getElementById("content");
+const loginStatus = document.getElementById("loginStatus");
+let currentPage = "summary";
 
-const statusEl = document.getElementById("status");
-const loginForm = document.getElementById("loginForm");
+function esc(value) {
+  return String(value ?? "").replace(/[&<>"']/g, c => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+  }[c]));
+}
 
-loginForm.addEventListener("submit", async function(e) {
+function date(value) {
+  if (!value) return "-";
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? esc(value) : d.toLocaleString("id-ID");
+}
+
+async function callAdmin(action) {
+  const { data, error } = await db.functions.invoke("license-admin", {
+    body: { action }
+  });
+  if (error) throw error;
+  if (!data) throw new Error("Respons server kosong.");
+  if (data.error) throw new Error(data.error);
+  return data;
+}
+
+function showLogin(message = "") {
+  loginSection.classList.remove("hidden");
+  app.classList.add("hidden");
+  loginStatus.textContent = message;
+}
+
+async function enterApp() {
+  loginSection.classList.add("hidden");
+  app.classList.remove("hidden");
+  document.getElementById("welcome").textContent = "Login administrator terverifikasi.";
+  await loadPage("summary");
+}
+
+document.getElementById("loginForm").addEventListener("submit", async e => {
   e.preventDefault();
-
-  const email = document.getElementById("email").value.trim();
-  const password = document.getElementById("password").value;
-
-  statusEl.textContent = "Memeriksa login...";
-  loginForm.querySelector("button").disabled = true;
-
+  const btn = document.getElementById("loginBtn");
+  btn.disabled = true;
+  loginStatus.textContent = "Memeriksa akun...";
   try {
-    const { data, error } = await supabaseClient.auth.signInWithPassword({
-      email,
-      password
+    const { error } = await db.auth.signInWithPassword({
+      email: document.getElementById("email").value.trim(),
+      password: document.getElementById("password").value
     });
-
     if (error) throw error;
-
-    const { data: result, error: functionError } =
-      await supabaseClient.functions.invoke("license-admin", {
-        body: { action: "ping" }
-      });
-
-    if (functionError) throw functionError;
-
-    if (!result || !result.ok) {
-      throw new Error(result?.error || "Verifikasi administrator gagal.");
-    }
-
-    statusEl.textContent = "Login admin berhasil!";
-    alert("Login berhasil. Akun administrator terverifikasi.");
-
-  } catch (error) {
-    await supabaseClient.auth.signOut();
-    statusEl.textContent = "Login gagal: " + error.message;
+    const result = await callAdmin("ping");
+    if (!result.ok) throw new Error("Verifikasi admin gagal.");
+    await enterApp();
+  } catch (err) {
+    await db.auth.signOut();
+    showLogin("Login gagal: " + (err.message || "Terjadi kesalahan"));
   } finally {
-    loginForm.querySelector("button").disabled = false;
+    btn.disabled = false;
   }
 });
+
+document.getElementById("logoutBtn").addEventListener("click", async () => {
+  await db.auth.signOut();
+  showLogin("Kamu sudah keluar.");
+});
+
+document.querySelectorAll("#nav button").forEach(btn => {
+  btn.addEventListener("click", () => loadPage(btn.dataset.page));
+});
+
+function table(headers, rows) {
+  return '<div class="tablewrap"><table><thead><tr>' +
+    headers.map(h => "<th>" + esc(h) + "</th>").join("") +
+    "</tr></thead><tbody>" +
+    (rows.length ? rows.map(row => "<tr>" +
+      row.map(v => "<td>" + esc(v) + "</td>").join("") +
+      "</tr>").join("") :
+      '<tr><td colspan="' + headers.length + '">Belum ada data.</td></tr>') +
+    "</tbody></table></div>";
+}
+
+async function loadPage(page) {
+  currentPage = page;
+  document.querySelectorAll("#nav button").forEach(btn =>
+    btn.classList.toggle("active", btn.dataset.page === page)
+  );
+  content.innerHTML = "Memuat data...";
+  try {
+    if (page === "summary") {
+      const r = await callAdmin("summary");
+      const s = r.summary;
+      const items = [
+        ["Total lisensi", s.total_licenses],
+        ["Lisensi aktif", s.active_licenses],
+        ["Lisensi kedaluwarsa", s.expired_licenses],
+        ["Total perangkat", s.total_devices],
+        ["Perangkat belum dicabut", s.active_devices],
+        ["Total percobaan", s.total_attempts],
+        ["Aktivasi berhasil", s.successful_attempts]
+      ];
+      content.innerHTML = "<h2>Ringkasan</h2><div class='grid'>" +
+        items.map(x => '<div class="stat"><span>' + esc(x[0]) +
+          '</span><strong>' + esc(x[1]) + "</strong></div>").join("") +
+        "</div><div class='actions'><button id='refreshBtn'>Muat ulang</button></div>";
+      document.getElementById("refreshBtn").onclick = () => loadPage("summary");
+    } else if (page === "clients") {
+      const r = await callAdmin("list_clients");
+      content.innerHTML = "<h2>Daftar Lisensi</h2><p class='muted'>Data lisensi pelanggan. Pengeditan belum diaktifkan.</p>" +
+        table(["Kode","Nama","Aktif","Berlaku sampai","Tanpa batas","Catatan","Terakhir terlihat"],
+          (r.clients || []).map(x => [
+            x.code, x.name, x.is_active ? "Ya" : "Tidak",
+            x.unlimited ? "Tanpa batas" : x.until,
+            x.unlimited ? "Ya" : "Tidak", x.note, date(x.last_seen)
+          ]));
+    } else if (page === "devices") {
+      const r = await callAdmin("list_devices");
+      content.innerHTML = "<h2>Perangkat</h2>" +
+        table(["ID","Kode lisensi","Label","Dicabut","Dibuat","Terakhir terlihat"],
+          (r.devices || []).map(x => [
+            x.id, x.code, x.label, x.revoked ? "Ya" : "Tidak",
+            date(x.created_at), date(x.last_seen)
+          ]));
+    } else if (page === "attempts") {
+      const r = await callAdmin("list_attempts");
+      content.innerHTML = "<h2>Aktivitas aktivasi</h2><p class='muted'>Maksimal 100 catatan terbaru.</p>" +
+        table(["Waktu","Kode","Berhasil","IP"],
+          (r.attempts || []).map(x => [
+            date(x.at), x.code, x.ok ? "Ya" : "Tidak", x.ip
+          ]));
+    } else if (page === "settings") {
+      const r = await callAdmin("get_settings");
+      const s = r.settings;
+      content.innerHTML = "<h2>Pengaturan Lisensi</h2>" +
+        (s ? table(["ID","Enforce","Grace days"], [[s.id, s.enforce ? "Aktif" : "Tidak aktif", s.grace_days]]) :
+        "<p class='muted'>Belum ada baris pengaturan.</p>") +
+        "<p class='muted'>Pengubahan pengaturan belum diaktifkan.</p>";
+    }
+  } catch (err) {
+    content.innerHTML = "<h2>Gagal memuat data</h2><p class='muted'>" +
+      esc(err.message || "Terjadi kesalahan") +
+      "</p><button id='retryBtn'>Coba lagi</button>";
+    document.getElementById("retryBtn").onclick = () => loadPage(currentPage);
+  }
+}
+
+(async function init() {
+  if (SUPABASE_URL === "https://flfcrnuzaijydcahctnj.supabase.co" ||
+      SUPABASE_KEY === "sb_publishable_64s9cIol8IpQfV-_s-wL9g_rrucHS-v") {
+    showLogin("Isi Project URL dan Publishable Key terlebih dahulu.");
+    return;
+  }
+  const { data } = await db.auth.getSession();
+  if (data.session) {
+    try {
+      await callAdmin("ping");
+      await enterApp();
+    } catch {
+      await db.auth.signOut();
+      showLogin();
+    }
+  }
+})();
 </script>
 </body>
 </html>
