@@ -8,8 +8,9 @@
 <style>
 *{box-sizing:border-box}
 body{margin:0;background:#111713;color:#edf2e8;font-family:Arial,sans-serif}
-button,input{font:inherit}
+button,input,select,textarea{font:inherit}
 button{cursor:pointer}
+button:disabled{opacity:.6;cursor:wait}
 .hidden{display:none!important}
 header{padding:18px 20px;background:#1c241e;border-bottom:1px solid #354338;display:flex;justify-content:space-between;align-items:center;gap:12px}
 .brand{color:#c4d6a0;font-weight:bold;letter-spacing:2px;font-size:12px}
@@ -21,25 +22,34 @@ main{max-width:1100px;margin:auto;padding:20px}
 .card{background:#1c241e;border:1px solid #354338;border-radius:12px;padding:18px;margin-bottom:16px}
 #login{max-width:380px;margin:10vh auto;padding:26px}
 label{display:block;font-size:13px;margin:14px 0 7px;color:#c9d3c7}
-input{width:100%;padding:12px;border:1px solid #455448;border-radius:8px;background:#111713;color:white}
+input,textarea,select{width:100%;padding:12px;border:1px solid #455448;border-radius:8px;background:#111713;color:white}
+textarea{min-height:76px;resize:vertical}
 #login button{width:100%;margin-top:20px}
-#status{font-size:13px;color:#c4d6a0;margin-top:14px;overflow-wrap:anywhere}
+#loginStatus{font-size:13px;color:#c4d6a0;margin-top:14px;overflow-wrap:anywhere}
 nav{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0}
 nav button{background:#27332a;color:#dce5d8}
 nav button.active{background:#c4d6a0;color:#172016}
 .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.formgrid{display:grid;grid-template-columns:1fr;gap:0 14px}
 .stat{background:#202b22;border:1px solid #354338;padding:16px;border-radius:10px}
 .stat span{display:block;color:#a6b0a6;font-size:12px}
 .stat strong{display:block;font-size:25px;margin-top:8px}
 h2{font-size:18px;margin:0 0 15px}
+h3{font-size:16px;margin:0 0 8px}
 .tablewrap{overflow-x:auto}
 table{width:100%;border-collapse:collapse;font-size:13px;white-space:nowrap}
 th,td{text-align:left;padding:11px 9px;border-bottom:1px solid #354338}
 th{color:#c4d6a0}
 .muted{color:#a6b0a6;font-size:13px;line-height:1.6}
 .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.notice{padding:11px 12px;border-radius:8px;background:#27332a;margin:12px 0;font-size:13px;line-height:1.5;overflow-wrap:anywhere}
+.notice.error{background:#492727;color:#ffdada}
+.notice.success{background:#243b2b;color:#d9f5d7}
 #content{min-height:200px}
-@media(min-width:650px){.grid{grid-template-columns:repeat(4,minmax(0,1fr))}main{padding:28px}}
+.checkrow{display:flex;align-items:center;gap:10px;margin-top:14px}
+.checkrow input{width:auto}
+.checkrow label{margin:0}
+@media(min-width:650px){.grid{grid-template-columns:repeat(4,minmax(0,1fr))}.formgrid{grid-template-columns:repeat(2,minmax(0,1fr))}main{padding:28px}.wide{grid-column:1/-1}}
 </style>
 </head>
 <body>
@@ -92,36 +102,31 @@ function esc(value) {
     "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
   }[c]));
 }
-
 function date(value) {
   if (!value) return "-";
   const d = new Date(value);
   return Number.isNaN(d.getTime()) ? esc(value) : d.toLocaleString("id-ID");
 }
-
-async function callAdmin(action) {
+async function callAdmin(action, payload = {}) {
   const { data, error } = await db.functions.invoke("license-admin", {
-    body: { action }
+    body: { action, ...payload }
   });
   if (error) throw error;
   if (!data) throw new Error("Respons server kosong.");
   if (data.error) throw new Error(data.error);
   return data;
 }
-
 function showLogin(message = "") {
   loginSection.classList.remove("hidden");
   app.classList.add("hidden");
   loginStatus.textContent = message;
 }
-
 async function enterApp() {
   loginSection.classList.add("hidden");
   app.classList.remove("hidden");
   document.getElementById("welcome").textContent = "Login administrator terverifikasi.";
   await loadPage("summary");
 }
-
 document.getElementById("loginForm").addEventListener("submit", async e => {
   e.preventDefault();
   const btn = document.getElementById("loginBtn");
@@ -143,16 +148,13 @@ document.getElementById("loginForm").addEventListener("submit", async e => {
     btn.disabled = false;
   }
 });
-
 document.getElementById("logoutBtn").addEventListener("click", async () => {
   await db.auth.signOut();
   showLogin("Kamu sudah keluar.");
 });
-
 document.querySelectorAll("#nav button").forEach(btn => {
   btn.addEventListener("click", () => loadPage(btn.dataset.page));
 });
-
 function table(headers, rows) {
   return '<div class="tablewrap"><table><thead><tr>' +
     headers.map(h => "<th>" + esc(h) + "</th>").join("") +
@@ -163,7 +165,26 @@ function table(headers, rows) {
       '<tr><td colspan="' + headers.length + '">Belum ada data.</td></tr>') +
     "</tbody></table></div>";
 }
-
+function renderClientForm() {
+  return `<section class="card" style="margin-top:16px">
+    <h2>Tambah Lisensi</h2>
+    <p class="muted">Buat akun pelanggan POS baru. Password ini akan digunakan pelanggan untuk aktivasi/login di aplikasi POS.</p>
+    <form id="createClientForm">
+      <div class="formgrid">
+        <div><label for="newCode">Kode lisensi</label><input id="newCode" maxlength="24" minlength="4" pattern="[A-Za-z0-9-]{4,24}" placeholder="CONTOH-001" required><p class="muted">4–24 karakter: huruf, angka, atau tanda hubung.</p></div>
+        <div><label for="newName">Nama pelanggan / toko</label><input id="newName" maxlength="100" required></div>
+        <div><label for="newPass">Password lisensi</label><input id="newPass" type="password" minlength="6" maxlength="100" autocomplete="new-password" required><p class="muted">Minimal 6 karakter.</p></div>
+        <div><label for="newUntil">Berlaku sampai</label><input id="newUntil" type="date"><p class="muted">Kosongkan jika memilih tanpa batas.</p></div>
+        <div><label for="newUrl">Project URL Supabase pelanggan</label><input id="newUrl" type="url" placeholder="https://xxxx.supabase.co" required></div>
+        <div><label for="newKey">Publishable / anon key Supabase pelanggan</label><input id="newKey" type="text" autocomplete="off" required></div>
+        <div class="wide"><label for="newNote">Catatan (opsional)</label><textarea id="newNote" maxlength="500" placeholder="Nama paket, kontak, atau catatan internal"></textarea></div>
+      </div>
+      <div class="checkrow"><input id="newUnlimited" type="checkbox"><label for="newUnlimited">Lisensi tanpa batas waktu</label></div>
+      <div id="createStatus" class="notice hidden" role="status"></div>
+      <div class="actions"><button id="createBtn" type="submit">Simpan Lisensi</button><button class="secondary" type="reset">Kosongkan Form</button></div>
+    </form>
+  </section>`;
+}
 async function loadPage(page) {
   currentPage = page;
   document.querySelectorAll("#nav button").forEach(btn =>
@@ -173,7 +194,7 @@ async function loadPage(page) {
   try {
     if (page === "summary") {
       const r = await callAdmin("summary");
-      const s = r.summary;
+      const s = r.summary || {};
       const items = [
         ["Total lisensi", s.total_licenses],
         ["Lisensi aktif", s.active_licenses],
@@ -185,18 +206,24 @@ async function loadPage(page) {
       ];
       content.innerHTML = "<h2>Ringkasan</h2><div class='grid'>" +
         items.map(x => '<div class="stat"><span>' + esc(x[0]) +
-          '</span><strong>' + esc(x[1]) + "</strong></div>").join("") +
+          '</span><strong>' + esc(x[1] ?? 0) + "</strong></div>").join("") +
         "</div><div class='actions'><button id='refreshBtn'>Muat ulang</button></div>";
       document.getElementById("refreshBtn").onclick = () => loadPage("summary");
     } else if (page === "clients") {
       const r = await callAdmin("list_clients");
-      content.innerHTML = "<h2>Daftar Lisensi</h2><p class='muted'>Data lisensi pelanggan. Pengeditan belum diaktifkan.</p>" +
+      content.innerHTML = "<h2>Daftar Lisensi</h2><p class='muted'>Lisensi yang sudah dibuat akan muncul di tabel ini.</p>" +
         table(["Kode","Nama","Aktif","Berlaku sampai","Tanpa batas","Catatan","Terakhir terlihat"],
           (r.clients || []).map(x => [
             x.code, x.name, x.is_active ? "Ya" : "Tidak",
-            x.unlimited ? "Tanpa batas" : x.until,
-            x.unlimited ? "Ya" : "Tidak", x.note, date(x.last_seen)
-          ]));
+            x.unlimited ? "Tanpa batas" : (x.until || "-"),
+            x.unlimited ? "Ya" : "Tidak", x.note || "-", date(x.last_seen)
+          ])) + renderClientForm();
+      document.getElementById("newUnlimited").addEventListener("change", e => {
+        const until = document.getElementById("newUntil");
+        until.disabled = e.target.checked;
+        if (e.target.checked) until.value = "";
+      });
+      document.getElementById("createClientForm").addEventListener("submit", createClient);
     } else if (page === "devices") {
       const r = await callAdmin("list_devices");
       content.innerHTML = "<h2>Perangkat</h2>" +
@@ -227,7 +254,53 @@ async function loadPage(page) {
     document.getElementById("retryBtn").onclick = () => loadPage(currentPage);
   }
 }
-
+async function createClient(e) {
+  e.preventDefault();
+  const form = document.getElementById("createClientForm");
+  const btn = document.getElementById("createBtn");
+  const status = document.getElementById("createStatus");
+  const unlimited = document.getElementById("newUnlimited").checked;
+  const code = document.getElementById("newCode").value.trim().toUpperCase();
+  const name = document.getElementById("newName").value.trim();
+  const pass = document.getElementById("newPass").value;
+  const until = document.getElementById("newUntil").value || null;
+  const supabase_url = document.getElementById("newUrl").value.trim().replace(/\/+$/, "");
+  const supabase_anon_key = document.getElementById("newKey").value.trim();
+  const note = document.getElementById("newNote").value.trim() || null;
+  status.classList.remove("hidden","success","error");
+  status.textContent = "Memeriksa data...";
+  btn.disabled = true;
+  try {
+    if (!/^[A-Z0-9-]{4,24}$/.test(code)) throw new Error("Kode harus 4–24 karakter: huruf, angka, atau tanda hubung.");
+    if (name.length < 1) throw new Error("Nama pelanggan wajib diisi.");
+    if (pass.length < 6 || pass.length > 100) throw new Error("Password harus 6–100 karakter.");
+    if (!/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(supabase_url)) throw new Error("URL harus berbentuk https://xxxx.supabase.co.");
+    if (!supabase_anon_key) throw new Error("Publishable / anon key wajib diisi.");
+    if (!unlimited && until && !/^\d{4}-\d{2}-\d{2}$/.test(until)) throw new Error("Format tanggal kedaluwarsa tidak valid.");
+    status.textContent = "Menyimpan lisensi...";
+    await callAdmin("create_client", {
+      code, name, pass, supabase_url, supabase_anon_key,
+      until: unlimited ? null : until,
+      unlimited,
+      note
+    });
+    status.classList.add("success");
+    status.textContent = "Lisensi berhasil dibuat.";
+    form.reset();
+    document.getElementById("newUntil").disabled = false;
+    await loadPage("clients");
+    // Show confirmation after the list refresh.
+    const confirmation = document.createElement("div");
+    confirmation.className = "notice success";
+    confirmation.textContent = "Lisensi " + code + " berhasil dibuat.";
+    content.insertBefore(confirmation, content.firstChild);
+  } catch (err) {
+    status.classList.add("error");
+    status.textContent = "Gagal menyimpan: " + (err.message || "Terjadi kesalahan");
+  } finally {
+    btn.disabled = false;
+  }
+}
 (async function init() {
   if (SUPABASE_URL === "ISI_PROJECT_URL" ||
       SUPABASE_KEY === "ISI_PUBLISHABLE_KEY") {
