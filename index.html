@@ -131,12 +131,57 @@
     <footer>BEANCULTS POS · LICENSE MANAGEMENT</footer>
   </main>
 
-  <script>
-    document.getElementById("loginForm").addEventListener("submit", function(e) {
-      e.preventDefault();
-      document.getElementById("status").textContent =
-        "Koneksi Supabase belum dipasang.";
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL = "https://flfcrnuzaijydcahctnj.supabase.co";
+const SUPABASE_KEY = "sb_publishable_64s9cIol8IpQfV-_s-wL9g_rrucHS-v";
+
+const supabaseClient = window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_KEY
+);
+
+const statusEl = document.getElementById("status");
+const loginForm = document.getElementById("loginForm");
+
+loginForm.addEventListener("submit", async function(e) {
+  e.preventDefault();
+
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value;
+
+  statusEl.textContent = "Memeriksa login...";
+  loginForm.querySelector("button").disabled = true;
+
+  try {
+    const { data, error } = await supabaseClient.auth.signInWithPassword({
+      email,
+      password
     });
-  </script>
+
+    if (error) throw error;
+
+    const { data: result, error: functionError } =
+      await supabaseClient.functions.invoke("license-admin", {
+        body: { action: "ping" }
+      });
+
+    if (functionError) throw functionError;
+
+    if (!result || !result.ok) {
+      throw new Error(result?.error || "Verifikasi administrator gagal.");
+    }
+
+    statusEl.textContent = "Login admin berhasil!";
+    alert("Login berhasil. Akun administrator terverifikasi.");
+
+  } catch (error) {
+    await supabaseClient.auth.signOut();
+    statusEl.textContent = "Login gagal: " + error.message;
+  } finally {
+    loginForm.querySelector("button").disabled = false;
+  }
+});
+</script>
 </body>
 </html>
