@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Beancults POS — Admin</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: #111713;
+      color: #f4f5ed;
+      font-family: Arial, sans-serif;
+    }
+
+    .card {
+      width: 100%;
+      max-width: 380px;
+      padding: 30px 24px;
+      background: #1c241e;
+      border: 1px solid #354338;
+      border-radius: 18px;
+    }
+
+    .brand {
+      color: #c4d6a0;
+      font-size: 13px;
+      letter-spacing: 3px;
+      font-weight: bold;
+    }
+
+    h1 {
+      margin: 12px 0 8px;
+      font-size: 27px;
+    }
+
+    .subtitle {
+      color: #a6b0a6;
+      font-size: 14px;
+      line-height: 1.6;
+      margin-bottom: 28px;
+    }
+
+    label {
+      display: block;
+      margin: 16px 0 8px;
+      font-size: 13px;
+      color: #dce3d7;
+    }
+
+    input {
+      width: 100%;
+      padding: 13px;
+      border: 1px solid #455448;
+      border-radius: 9px;
+      background: #111713;
+      color: white;
+      font-size: 16px;
+      outline: none;
+    }
+
+    input:focus { border-color: #b4cd8c; }
+
+    button {
+      width: 100%;
+      margin-top: 24px;
+      padding: 14px;
+      border: 0;
+      border-radius: 9px;
+      background: #c4d6a0;
+      color: #172016;
+      font-size: 15px;
+      font-weight: bold;
+    }
+
+    .status {
+      margin-top: 18px;
+      text-align: center;
+      color: #a6b0a6;
+      font-size: 13px;
+    }
+
+    footer {
+      margin-top: 26px;
+      text-align: center;
+      color: #7f8a80;
+      font-size: 11px;
+    }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <div class="brand">BEANCULTS</div>
+    <h1>Admin Panel</h1>
+    <div class="subtitle">
+      Manajemen lisensi dan perangkat POS toko Anda.
+    </div>
+
+    <form id="loginForm">
+      <label for="email">Email administrator</label>
+      <input
+        id="email"
+        type="email"
+        placeholder="admin@email.com"
+        autocomplete="username"
+        required
+      >
+
+      <label for="password">Password</label>
+      <input
+        id="password"
+        type="password"
+        placeholder="Masukkan password"
+        autocomplete="current-password"
+        required
+      >
+
+      <button type="submit">Masuk</button>
+    </form>
+
+    <div class="status" id="status">
+      Portal administrator
+    </div>
+
+    <footer>BEANCULTS POS · LICENSE MANAGEMENT</footer>
+  </main>
+
+  <script>
+    document.getElementById("loginForm").addEventListener("submit", function(e) {
+      e.preventDefault();
+      document.getElementById("status").textContent =
+        "Koneksi Supabase belum dipasang.";
+    });
+  </script>
+</body>
+</html>
