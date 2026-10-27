@@ -77,8 +77,8 @@ th{color:#c4d6a0}
 </div>
 
 <script>
-const SUPABASE_URL = "ISI_PROJECT_URL";
-const SUPABASE_KEY = "ISI_PUBLISHABLE_KEY";
+const SUPABASE_URL = "https://flfcrnuzaijydcahctnj.supabase.co";
+const SUPABASE_KEY = "sb_publishable_64s9cIol8IpQfV-_s-wL9g_rrucHS-v";
 const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const loginSection = document.getElementById("login");
@@ -229,8 +229,8 @@ async function loadPage(page) {
 }
 
 (async function init() {
-  if (SUPABASE_URL === "https://flfcrnuzaijydcahctnj.supabase.co" ||
-      SUPABASE_KEY === "sb_publishable_64s9cIol8IpQfV-_s-wL9g_rrucHS-v") {
+  if (SUPABASE_URL === "ISI_PROJECT_URL" ||
+      SUPABASE_KEY === "ISI_PUBLISHABLE_KEY") {
     showLogin("Isi Project URL dan Publishable Key terlebih dahulu.");
     return;
   }
