@@ -48,7 +48,7 @@ th{color:#c4d6a0}
 #content{min-height:200px}
 .checkrow{display:flex;align-items:center;gap:10px;margin-top:14px}
 .checkrow input{width:auto}
-.checkrow label{margin:0}
+.smallbtn{padding:7px 10px;font-size:12px}
 @media(min-width:650px){.grid{grid-template-columns:repeat(4,minmax(0,1fr))}.formgrid{grid-template-columns:repeat(2,minmax(0,1fr))}main{padding:28px}.wide{grid-column:1/-1}}
 </style>
 </head>
@@ -66,7 +66,6 @@ th{color:#c4d6a0}
   </form>
   <div id="loginStatus" role="status"></div>
 </section>
-
 <div id="app" class="hidden">
 <header>
   <div><div class="brand">BEANCULTS</div><h1>Admin Lisensi</h1></div>
@@ -85,17 +84,16 @@ th{color:#c4d6a0}
   <div class="muted">Beancults POS · License Management</div>
 </main>
 </div>
-
 <script>
 const SUPABASE_URL = "https://flfcrnuzaijydcahctnj.supabase.co";
 const SUPABASE_KEY = "sb_publishable_64s9cIol8IpQfV-_s-wL9g_rrucHS-v";
 const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
 const loginSection = document.getElementById("login");
 const app = document.getElementById("app");
 const content = document.getElementById("content");
 const loginStatus = document.getElementById("loginStatus");
 let currentPage = "summary";
+let cachedClients = [];
 
 function esc(value) {
   return String(value ?? "").replace(/[&<>"']/g, c => ({
@@ -168,7 +166,7 @@ function table(headers, rows) {
 function renderClientForm() {
   return `<section class="card" style="margin-top:16px">
     <h2>Tambah Lisensi</h2>
-    <p class="muted">Buat akun pelanggan POS baru. Password ini akan digunakan pelanggan untuk aktivasi/login di aplikasi POS.</p>
+    <p class="muted">Buat akun pelanggan POS baru. Password ini digunakan pelanggan untuk aktivasi/login POS.</p>
     <form id="createClientForm">
       <div class="formgrid">
         <div><label for="newCode">Kode lisensi</label><input id="newCode" maxlength="24" minlength="4" pattern="[A-Za-z0-9-]{4,24}" placeholder="CONTOH-001" required><p class="muted">4–24 karakter: huruf, angka, atau tanda hubung.</p></div>
@@ -182,6 +180,27 @@ function renderClientForm() {
       <div class="checkrow"><input id="newUnlimited" type="checkbox"><label for="newUnlimited">Lisensi tanpa batas waktu</label></div>
       <div id="createStatus" class="notice hidden" role="status"></div>
       <div class="actions"><button id="createBtn" type="submit">Simpan Lisensi</button><button class="secondary" type="reset">Kosongkan Form</button></div>
+    </form>
+  </section>`;
+}
+function renderEditForm() {
+  return `<section id="editCard" class="card hidden" style="margin-top:16px">
+    <h2>Edit Lisensi</h2>
+    <p class="muted">Kode lisensi tidak bisa diubah. Password pelanggan tetap sama.</p>
+    <form id="editClientForm">
+      <input id="editCode" type="hidden">
+      <div class="formgrid">
+        <div><label for="editCodeDisplay">Kode lisensi</label><input id="editCodeDisplay" readonly></div>
+        <div><label for="editName">Nama pelanggan / toko</label><input id="editName" maxlength="100" required></div>
+        <div><label for="editUntil">Berlaku sampai</label><input id="editUntil" type="date"><p class="muted">Kosongkan jika memilih tanpa batas.</p></div>
+        <div><label for="editUrl">Project URL Supabase pelanggan</label><input id="editUrl" type="url" required></div>
+        <div class="wide"><label for="editKey">Publishable / anon key Supabase pelanggan</label><input id="editKey" type="text" autocomplete="off" required></div>
+        <div class="wide"><label for="editNote">Catatan</label><textarea id="editNote" maxlength="500"></textarea></div>
+      </div>
+      <div class="checkrow"><input id="editUnlimited" type="checkbox"><label for="editUnlimited">Lisensi tanpa batas waktu</label></div>
+      <div class="checkrow"><input id="editActive" type="checkbox"><label for="editActive">Lisensi aktif</label></div>
+      <div id="editStatus" class="notice hidden" role="status"></div>
+      <div class="actions"><button id="editSaveBtn" type="submit">Simpan Perubahan</button><button class="secondary" id="editCancelBtn" type="button">Batal</button></div>
     </form>
   </section>`;
 }
@@ -211,13 +230,36 @@ async function loadPage(page) {
       document.getElementById("refreshBtn").onclick = () => loadPage("summary");
     } else if (page === "clients") {
       const r = await callAdmin("list_clients");
-      content.innerHTML = "<h2>Daftar Lisensi</h2><p class='muted'>Lisensi yang sudah dibuat akan muncul di tabel ini.</p>" +
-        table(["Kode","Nama","Aktif","Berlaku sampai","Tanpa batas","Catatan","Terakhir terlihat"],
-          (r.clients || []).map(x => [
-            x.code, x.name, x.is_active ? "Ya" : "Tidak",
-            x.unlimited ? "Tanpa batas" : (x.until || "-"),
-            x.unlimited ? "Ya" : "Tidak", x.note || "-", date(x.last_seen)
-          ])) + renderClientForm();
+      cachedClients = r.clients || [];
+      const headers = ["Kode","Nama","Aktif","Berlaku sampai","Tanpa batas","Catatan","Terakhir terlihat","Aksi"];
+      const rows = cachedClients.map((x, i) =>
+        `<tr>
+          <td>${esc(x.code)}</td>
+          <td>${esc(x.name)}</td>
+          <td>${x.is_active ? "Ya" : "Tidak"}</td>
+          <td>${esc(x.unlimited ? "Tanpa batas" : (x.until || "-"))}</td>
+          <td>${x.unlimited ? "Ya" : "Tidak"}</td>
+          <td>${esc(x.note || "-")}</td>
+          <td>${esc(date(x.last_seen))}</td>
+          <td><button type="button" class="smallbtn edit-client-btn" data-index="${i}">Edit</button></td>
+        </tr>`
+      ).join("");
+      content.innerHTML = "<h2>Daftar Lisensi</h2><p class='muted'>Tekan Edit pada lisensi yang ingin diubah.</p>" +
+        `<div class="tablewrap"><table><thead><tr>${headers.map(h => `<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>${rows || `<tr><td colspan="${headers.length}">Belum ada data.</td></tr>`}</tbody></table></div>` +
+        renderEditForm() + renderClientForm();
+
+      document.querySelectorAll(".edit-client-btn").forEach(btn => {
+        btn.addEventListener("click", () => openEditForm(cachedClients[Number(btn.dataset.index)]));
+      });
+      document.getElementById("editClientForm").addEventListener("submit", updateClient);
+      document.getElementById("editCancelBtn").addEventListener("click", () => {
+        document.getElementById("editCard").classList.add("hidden");
+      });
+      document.getElementById("editUnlimited").addEventListener("change", e => {
+        const until = document.getElementById("editUntil");
+        until.disabled = e.target.checked;
+        if (e.target.checked) until.value = "";
+      });
       document.getElementById("newUnlimited").addEventListener("change", e => {
         const until = document.getElementById("newUntil");
         until.disabled = e.target.checked;
@@ -254,6 +296,62 @@ async function loadPage(page) {
     document.getElementById("retryBtn").onclick = () => loadPage(currentPage);
   }
 }
+function openEditForm(client) {
+  if (!client) return;
+  const card = document.getElementById("editCard");
+  document.getElementById("editCode").value = client.code || "";
+  document.getElementById("editCodeDisplay").value = client.code || "";
+  document.getElementById("editName").value = client.name || "";
+  document.getElementById("editUntil").value = client.until || "";
+  document.getElementById("editUntil").disabled = !!client.unlimited;
+  document.getElementById("editUrl").value = client.supabase_url || "";
+  document.getElementById("editKey").value = client.supabase_anon_key || "";
+  document.getElementById("editNote").value = client.note || "";
+  document.getElementById("editUnlimited").checked = !!client.unlimited;
+  document.getElementById("editActive").checked = !!client.is_active;
+  const status = document.getElementById("editStatus");
+  status.className = "notice hidden";
+  status.textContent = "";
+  card.classList.remove("hidden");
+  card.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+async function updateClient(e) {
+  e.preventDefault();
+  const btn = document.getElementById("editSaveBtn");
+  const status = document.getElementById("editStatus");
+  const unlimited = document.getElementById("editUnlimited").checked;
+  const payload = {
+    code: document.getElementById("editCode").value,
+    name: document.getElementById("editName").value.trim(),
+    until: unlimited ? null : (document.getElementById("editUntil").value || null),
+    supabase_url: document.getElementById("editUrl").value.trim().replace(/\/+$/, ""),
+    supabase_anon_key: document.getElementById("editKey").value.trim(),
+    unlimited,
+    is_active: document.getElementById("editActive").checked,
+    note: document.getElementById("editNote").value.trim() || null
+  };
+  status.className = "notice";
+  status.textContent = "Menyimpan perubahan...";
+  btn.disabled = true;
+  try {
+    if (!payload.name) throw new Error("Nama pelanggan wajib diisi.");
+    if (!/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(payload.supabase_url)) throw new Error("URL harus berbentuk https://xxxx.supabase.co.");
+    if (!payload.supabase_anon_key) throw new Error("Publishable / anon key wajib diisi.");
+    await callAdmin("update_client", payload);
+    status.className = "notice success";
+    status.textContent = "Perubahan berhasil disimpan.";
+    await loadPage("clients");
+    const confirmation = document.createElement("div");
+    confirmation.className = "notice success";
+    confirmation.textContent = "Lisensi " + payload.code + " berhasil diperbarui.";
+    content.insertBefore(confirmation, content.firstChild);
+  } catch (err) {
+    status.className = "notice error";
+    status.textContent = "Gagal menyimpan: " + (err.message || "Terjadi kesalahan");
+  } finally {
+    btn.disabled = false;
+  }
+}
 async function createClient(e) {
   e.preventDefault();
   const form = document.getElementById("createClientForm");
@@ -276,7 +374,6 @@ async function createClient(e) {
     if (pass.length < 6 || pass.length > 100) throw new Error("Password harus 6–100 karakter.");
     if (!/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(supabase_url)) throw new Error("URL harus berbentuk https://xxxx.supabase.co.");
     if (!supabase_anon_key) throw new Error("Publishable / anon key wajib diisi.");
-    if (!unlimited && until && !/^\d{4}-\d{2}-\d{2}$/.test(until)) throw new Error("Format tanggal kedaluwarsa tidak valid.");
     status.textContent = "Menyimpan lisensi...";
     await callAdmin("create_client", {
       code, name, pass, supabase_url, supabase_anon_key,
@@ -284,17 +381,13 @@ async function createClient(e) {
       unlimited,
       note
     });
-    status.classList.add("success");
-    status.textContent = "Lisensi berhasil dibuat.";
-    form.reset();
-    document.getElementById("newUntil").disabled = false;
     await loadPage("clients");
-    // Show confirmation after the list refresh.
     const confirmation = document.createElement("div");
     confirmation.className = "notice success";
     confirmation.textContent = "Lisensi " + code + " berhasil dibuat.";
     content.insertBefore(confirmation, content.firstChild);
   } catch (err) {
+    status.classList.remove("hidden");
     status.classList.add("error");
     status.textContent = "Gagal menyimpan: " + (err.message || "Terjadi kesalahan");
   } finally {
