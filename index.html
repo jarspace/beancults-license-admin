@@ -228,6 +228,7 @@ async function loadPage(page) {
           '</span><strong>' + esc(x[1] ?? 0) + "</strong></div>").join("") +
         "</div><div class='actions'><button id='refreshBtn'>Muat ulang</button></div>";
       document.getElementById("refreshBtn").onclick = () => loadPage("summary");
+
     } else if (page === "clients") {
       const r = await callAdmin("list_clients");
       cachedClients = r.clients || [];
@@ -266,14 +267,74 @@ async function loadPage(page) {
         if (e.target.checked) until.value = "";
       });
       document.getElementById("createClientForm").addEventListener("submit", createClient);
+
     } else if (page === "devices") {
       const r = await callAdmin("list_devices");
-      content.innerHTML = "<h2>Perangkat</h2>" +
-        table(["ID","Kode lisensi","Label","Dicabut","Dibuat","Terakhir terlihat"],
-          (r.devices || []).map(x => [
-            x.id, x.code, x.label, x.revoked ? "Ya" : "Tidak",
-            date(x.created_at), date(x.last_seen)
-          ]));
+      const devices = r.devices || [];
+      const rows = devices.map((x, i) => `
+        <tr>
+          <td>${esc(x.id)}</td>
+          <td>${esc(x.code)}</td>
+          <td>${esc(x.label || "-")}</td>
+          <td>${x.revoked ? "Sudah direset" : "Aktif"}</td>
+          <td>${esc(date(x.created_at))}</td>
+          <td>${esc(date(x.last_seen))}</td>
+          <td>${x.revoked
+            ? '<span class="muted">Selesai</span>'
+            : `<button type="button" class="danger smallbtn reset-device-btn" data-index="${i}">Reset</button>`}
+          </td>
+        </tr>
+      `).join("");
+
+      content.innerHTML =
+        "<h2>Perangkat</h2>" +
+        "<p class='muted'>Reset akan mencabut akses perangkat yang dipilih.</p>" +
+        `<div class="tablewrap">
+          <table>
+            <thead><tr>
+              <th>ID</th><th>Kode lisensi</th><th>Label</th>
+              <th>Status</th><th>Dibuat</th><th>Terakhir terlihat</th><th>Aksi</th>
+            </tr></thead>
+            <tbody>${rows || '<tr><td colspan="7">Belum ada data.</td></tr>'}</tbody>
+          </table>
+        </div>
+        <div id="deviceStatus" class="notice hidden" role="status"></div>`;
+
+      document.querySelectorAll(".reset-device-btn").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          const device = devices[Number(btn.dataset.index)];
+          if (!device) return;
+
+          if (!confirm(
+            "Reset perangkat ini?\n\nKode lisensi: " + device.code +
+            "\nID: " + device.id +
+            "\n\nAkses perangkat akan dicabut."
+          )) return;
+
+          btn.disabled = true;
+          btn.textContent = "Memproses...";
+
+          try {
+            await callAdmin("reset_device", { id: device.id });
+            await loadPage("devices");
+
+            const confirmation = document.createElement("div");
+            confirmation.className = "notice success";
+            confirmation.textContent =
+              "Perangkat berhasil direset. ID: " + device.id;
+            content.insertBefore(confirmation, content.children[1]);
+          } catch (err) {
+            btn.disabled = false;
+            btn.textContent = "Reset";
+            const status = document.getElementById("deviceStatus");
+            status.className = "notice error";
+            status.textContent =
+              "Gagal mereset perangkat: " +
+              (err.message || "Terjadi kesalahan");
+          }
+        });
+      });
+
     } else if (page === "attempts") {
       const r = await callAdmin("list_attempts");
       content.innerHTML = "<h2>Aktivitas aktivasi</h2><p class='muted'>Maksimal 100 catatan terbaru.</p>" +
@@ -281,6 +342,7 @@ async function loadPage(page) {
           (r.attempts || []).map(x => [
             date(x.at), x.code, x.ok ? "Ya" : "Tidak", x.ip
           ]));
+
     } else if (page === "settings") {
       const r = await callAdmin("get_settings");
       const s = r.settings;
@@ -354,7 +416,6 @@ async function updateClient(e) {
 }
 async function createClient(e) {
   e.preventDefault();
-  const form = document.getElementById("createClientForm");
   const btn = document.getElementById("createBtn");
   const status = document.getElementById("createStatus");
   const unlimited = document.getElementById("newUnlimited").checked;
@@ -370,16 +431,14 @@ async function createClient(e) {
   btn.disabled = true;
   try {
     if (!/^[A-Z0-9-]{4,24}$/.test(code)) throw new Error("Kode harus 4–24 karakter: huruf, angka, atau tanda hubung.");
-    if (name.length < 1) throw new Error("Nama pelanggan wajib diisi.");
+    if (!name) throw new Error("Nama pelanggan wajib diisi.");
     if (pass.length < 6 || pass.length > 100) throw new Error("Password harus 6–100 karakter.");
     if (!/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(supabase_url)) throw new Error("URL harus berbentuk https://xxxx.supabase.co.");
     if (!supabase_anon_key) throw new Error("Publishable / anon key wajib diisi.");
     status.textContent = "Menyimpan lisensi...";
     await callAdmin("create_client", {
       code, name, pass, supabase_url, supabase_anon_key,
-      until: unlimited ? null : until,
-      unlimited,
-      note
+      until: unlimited ? null : until, unlimited, note
     });
     await loadPage("clients");
     const confirmation = document.createElement("div");
@@ -395,11 +454,6 @@ async function createClient(e) {
   }
 }
 (async function init() {
-  if (SUPABASE_URL === "ISI_PROJECT_URL" ||
-      SUPABASE_KEY === "ISI_PUBLISHABLE_KEY") {
-    showLogin("Isi Project URL dan Publishable Key terlebih dahulu.");
-    return;
-  }
   const { data } = await db.auth.getSession();
   if (data.session) {
     try {
